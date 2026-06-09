@@ -8,9 +8,9 @@ import type { ControlPosition } from 'react-map-gl/mapbox';
 
 type DrawControlProps = ConstructorParameters<typeof MapboxDraw>[0] & {
   position?: ControlPosition;
-  onCreate?: (evt: { features: object[] }) => void;
-  onUpdate?: (evt: { features: object[]; action: string }) => void;
-  onDelete?: (evt: { features: object[] }) => void;
+  onCreate?: (evt: MapboxDraw.DrawCreateEvent) => void;
+  onUpdate?: (evt: MapboxDraw.DrawUpdateEvent) => void;
+  onDelete?: (evt: MapboxDraw.DrawDeleteEvent) => void;
 };
 
 export default function DrawControl(props: DrawControlProps) {

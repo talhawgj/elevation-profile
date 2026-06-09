@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import type MapboxDraw from '@mapbox/mapbox-gl-draw';
 import MapComp from '@/components/MapComp';
 import DrawControl from '@/components/DrawControl';
 import ElevationChart from '@/components/ElevationChart';
@@ -12,7 +13,6 @@ type ElevationPoint = {
 };
 
 export default function Home() {
-  const [features, setFeatures] = useState({});
   const [elevationData, setElevationData] = useState<ElevationPoint[]>([]);
 
   const fetchElevation = async (coords: [number, number][]) => {
@@ -23,10 +23,12 @@ export default function Home() {
       );
       const data = await res.json();
 
-      const points: ElevationPoint[] = data.results.map((d: any, i: number) => ({
-        distance: i,
-        elevation: d.elevation,
-      }));
+      const points: ElevationPoint[] = data.results.map(
+        (d: { elevation: number }, i: number) => ({
+          distance: i,
+          elevation: d.elevation,
+        })
+      );
 
       setElevationData(points);
     } catch (err) {
@@ -49,31 +51,18 @@ export default function Home() {
     return sampled;
   };
 
-  const onUpdate = useCallback((e: { features: any[] }) => {
-    setFeatures((curr) => {
-      const newFeatures = { ...curr };
-      for (const f of e.features) {
-        newFeatures[f.id] = f;
-
-        if (f.geometry.type === 'LineString') {
-          const coords = f.geometry.coordinates as [number, number][];
-          const interpolated = interpolateLine(coords, 30);
-          fetchElevation(interpolated);
-        }
+  const onUpdate = useCallback((e: MapboxDraw.DrawCreateEvent) => {
+    for (const f of e.features) {
+      if (f.geometry.type === 'LineString') {
+        const coords = f.geometry.coordinates as [number, number][];
+        const interpolated = interpolateLine(coords, 30);
+        fetchElevation(interpolated);
       }
-      return newFeatures;
-    });
+    }
   }, []);
 
-  const onDelete = useCallback((e: { features: any[] }) => {
-    setFeatures((curr) => {
-      const newFeatures = { ...curr };
-      for (const f of e.features) {
-        delete newFeatures[f.id];
-      }
-      setElevationData([]);
-      return newFeatures;
-    });
+  const onDelete = useCallback(() => {
+    setElevationData([]);
   }, []);
 
   return (
