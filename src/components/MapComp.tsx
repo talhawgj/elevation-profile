@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import Map, { Layer, NavigationControl, Source, type MapRef } from "react-map-gl/mapbox";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { ParcelAnalysis } from "@/lib/terrain";
@@ -23,6 +23,34 @@ const MapComp = forwardRef<MapExportHandle, Props>(function MapComp({ children, 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const mapRef = useRef<MapRef>(null);
   const [printSnapshot, setPrintSnapshot] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!("geolocation" in navigator)) return;
+
+    let cancelled = false;
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        if (cancelled) return;
+
+        mapRef.current?.getMap().jumpTo({
+          center: [coords.longitude, coords.latitude],
+          zoom: 15,
+        });
+      },
+      () => {
+        // Keep the default view when location access is unavailable or denied.
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 60_000,
+        timeout: 10_000,
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useImperativeHandle(ref, () => ({
     async prepareExport() {
