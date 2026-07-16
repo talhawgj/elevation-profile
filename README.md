@@ -1,185 +1,77 @@
-# Elevation Profile Viewer
+# Infryne Terrain Intelligence
 
-A Next.js application that allows users to draw lines on an interactive map and visualize elevation profiles along those lines in real-time.
+A stateless urban site-feasibility workspace for drawing a terrain transect, decoding elevation in the browser, evaluating slope constraints, and estimating cut/fill earthwork.
 
-## 🌟 Features
+## What it does
 
-- **Interactive Map**: Powered by Mapbox GL JS with satellite imagery and 3D terrain
-- **Line Drawing**: Draw custom routes directly on the map using drawing controls
-- **Real-time Elevation Data**: Fetches elevation data from Open Elevation API
-- **Dynamic Charts**: Interactive elevation profile charts using Recharts
-- **Responsive Design**: Clean, responsive UI built with Tailwind CSS
-- **TypeScript**: Fully typed codebase for better development experience
+- Draw a line across a site with Mapbox Draw.
+- Sample 50 evenly spaced locations along the transect.
+- Switch to Site Mode and draw a complete parcel boundary.
+- Decode an adaptive native-pixel terrain grid across the parcel, capped at 5,000 analysis cells for responsive browser performance.
+- Render a parcel-wide green/orange/red slope heatmap directly on the map.
+- Toggle an AWS Terrarium-derived hillshade over the satellite basemap.
+- Calculate buildable area, boundary length, elevation range, and full-surface cut/fill volumes.
+- Fetch only the public AWS Terrarium DEM tiles needed by those locations.
+- Decode elevation from PNG pixel values on an off-screen browser canvas.
+- Classify each segment as prime (`<10%`), engineered (`10–15%`), or restricted (`>15%`).
+- Drag a proposed pad elevation and see cut/fill volumes update immediately.
+- Adjust the assumed pad width for a concept-stage 3D earthwork estimate.
+- Export the analysis with the browser print dialog.
 
-## 🚀 Technologies Used
+The application has no elevation API route, AWS credentials, or spatial database. Terrain computation and feasibility math run entirely in the browser. Mapbox is used only for the interactive basemap and drawing controls.
 
-- **Frontend Framework**: Next.js 15 with React 19
-- **Mapping**: Mapbox GL JS and react-map-gl
-- **Drawing Tools**: Mapbox GL Draw
-- **Charts**: Recharts for elevation profile visualization
-- **Geospatial Operations**: Turf.js for line interpolation and calculations
-- **Styling**: Tailwind CSS 4
-- **Language**: TypeScript
-- **Elevation Data**: Open Elevation API
+## Analysis modes
 
-## 📋 Prerequisites
+- **Site Mode:** Decodes the parcel surface, calculates two-dimensional slope from neighbouring DEM cells, maps buildability, and integrates earthwork across the complete site area.
+- **Transect Mode:** Produces a lightweight 50-sample cross-section for roads, access routes, utilities, and rapid terrain inspection.
 
-Before running this application, you need:
+Only one drawn feature is active at a time. Drawing a new parcel or transect automatically removes the previous geometry and clears its analysis. The map heading uses the selected geometry's center coordinates and nearby labels already present in the loaded Mapbox style.
 
-1. **Mapbox Access Token**: Sign up at [Mapbox](https://www.mapbox.com/) and obtain an access token
-2. **Node.js**: Version 18 or higher
-3. **npm/yarn/pnpm**: Package manager of your choice
+## Run locally
 
-## ⚙️ Installation
+Install dependencies:
 
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd elevation-profile
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   # or
-   yarn install
-   # or
-   pnpm install
-   ```
-
-3. **Set up environment variables**:
-   Create a `.env.local` file in the root directory and add your Mapbox token:
-   ```env
-   NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_access_token_here
-   ```
-
-4. **Run the development server**:
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   # or
-   pnpm dev
-   ```
-
-5. **Open your browser**:
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-## 🎯 How to Use
-
-1. **Navigate the Map**: Use mouse controls to pan and zoom around the satellite map
-2. **Draw a Line**: Click the line drawing tool and draw a route on the map
-3. **View Elevation**: The elevation profile chart will automatically appear showing the terrain elevation along your drawn line
-4. **Delete Lines**: Use the trash tool to remove drawn lines
-5. **Interactive Chart**: Hover over the chart to see specific elevation values
-
-## 🏗️ Project Structure
-
-```
-elevation-profile/
-├── src/
-│   ├── app/
-│   │   ├── globals.css          # Global styles
-│   │   ├── layout.tsx           # Root layout component
-│   │   └── page.tsx             # Main application page
-│   └── components/
-│       ├── DrawControl.tsx      # Mapbox drawing controls
-│       ├── ElevationChart.tsx   # Elevation profile chart component
-│       └── MapComp.tsx          # Main map component
-├── public/                      # Static assets
-├── package.json                 # Project dependencies
-├── next.config.ts              # Next.js configuration
-├── tailwind.config.ts          # Tailwind CSS configuration
-└── tsconfig.json               # TypeScript configuration
+```bash
+npm install
 ```
 
-## 🔧 Key Components
+Create `.env.local`:
 
-### MapComp
-The main map component that renders the Mapbox map with:
-- Satellite imagery as the base layer
-- 3D terrain visualization with DEM data
-- Globe projection for better geographical context
+```env
+NEXT_PUBLIC_MAPBOX_TOKEN=your_public_mapbox_token
+```
 
-### DrawControl
-Handles line drawing functionality:
-- Integrates Mapbox GL Draw with React
-- Supports line creation and deletion
-- Triggers elevation data fetching when lines are drawn
+Start the app:
 
-### ElevationChart
-Displays elevation profiles:
-- Uses Recharts for interactive visualization
-- Shows elevation vs. distance along the drawn line
-- Responsive overlay positioned on the map
+```bash
+npm run dev
+```
 
-## 🌐 API Integration
+Open [http://localhost:3000](http://localhost:3000).
 
-The application uses the [Open Elevation API](https://open-elevation.com/) to fetch elevation data:
-- **Endpoint**: `https://api.open-elevation.com/api/v1/lookup`
-- **Free to use**: No API key required
-- **Input**: Coordinates in lat,lon format
-- **Output**: Elevation data in meters
+## Production build
 
-## 🔄 Data Processing
+```bash
+npm run build
+npm start
+```
 
-1. **Line Interpolation**: Uses Turf.js to interpolate drawn lines into 30 evenly spaced points
-2. **Coordinate Transformation**: Converts map coordinates to API-compatible format
-3. **Elevation Mapping**: Maps elevation data to chart-compatible format with distance indexing
+## Architecture
 
-## 📝 Available Scripts
+`src/lib/terrain.ts` contains the stateless terrain engine. Coordinates are converted to Web Mercator tile and pixel positions at zoom 14. Each pixel is decoded using the Terrarium formula:
 
-- `npm run dev` - Start development server with Turbopack
-- `npm run build` - Build the application for production
-- `npm run start` - Start the production server
-- `npm run lint` - Run ESLint for code quality checks
+```text
+elevation = (R × 256 + G + B ÷ 256) − 32768
+```
 
-## 🛠️ Configuration
+Tiles are loaded from the public `elevation-tiles-prod` S3 bucket and cached in memory for the browser session, so nearby transects do not repeatedly decode the same PNG. The underlying global dataset combines SRTM and other open elevation sources. All results are approximate and intended for preliminary feasibility screening, not final survey or engineering work.
 
-### Environment Variables
-- `NEXT_PUBLIC_MAPBOX_TOKEN` - Your Mapbox access token (required)
+Elevation data processing and tiles are provided by Mapzen/Tilezen through the AWS Open Data program. See the [Terrain Tiles dataset](https://registry.opendata.aws/terrain-tiles/) and [attribution requirements](https://github.com/tilezen/joerd/blob/master/docs/attribution.md).
 
-### Map Configuration
-The map is configured with:
-- Initial view centered at coordinates (0, 0) with zoom level 3
-- Satellite imagery style
-- Globe projection for better visualization
-- Terrain exaggeration factor of 1.5
+## Stack
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is open source and available under the [MIT License](LICENSE).
-
-## 🔗 Useful Links
-
-- [Mapbox GL JS Documentation](https://docs.mapbox.com/mapbox-gl-js/)
-- [Open Elevation API](https://open-elevation.com/)
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Recharts Documentation](https://recharts.org/)
-- [Turf.js Documentation](https://turfjs.org/)
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **Map not loading**: Ensure your Mapbox token is correctly set in `.env.local`
-2. **Elevation data not showing**: Check browser console for API errors
-3. **Build errors**: Ensure all dependencies are installed with `npm install`
-
-### Performance Notes
-
-- The application interpolates lines to 30 points to balance detail with API performance
-- Large or complex drawings may take longer to process
-- Consider implementing caching for frequently accessed elevation data
-
----
-
-Built with ❤️ using Next.js and Mapbox
+- Next.js 15 and React 19
+- TypeScript
+- Mapbox GL JS and Mapbox Draw
+- Turf.js
+- Tailwind CSS 4
