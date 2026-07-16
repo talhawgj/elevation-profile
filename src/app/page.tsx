@@ -114,7 +114,7 @@ export default function Home() {
         setStatus("ready");
         setMessage(`${number.format(analysis.cells.length)} terrain cells decoded locally`);
       } else if (!isSite && feature.geometry.type === "LineString") {
-        const points = await analyzeTransect(feature.geometry.coordinates as [number, number][], 50, controller.signal);
+        const points = await analyzeTransect(feature.geometry.coordinates as [number, number][], 2000, controller.signal);
         if (controller.signal.aborted) return;
         const elevations = points.map((point) => point.elevation).sort((a, b) => a - b);
         setTerrain(points);
